@@ -1,11 +1,10 @@
-const express = require('express');
-const User = require('../Module');
-
+import express from "express";
+import User from "../Module.js"; // Make sure Module.js also uses ESM
 
 const router = express.Router();
 
 // Create a user
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
     const { name, email } = req.body;
     const user = await User.create({ name, email });
@@ -16,7 +15,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get all users
-router.get('/', async (req, res) => {
+router.get("/", async (_req, res) => {
   try {
     const users = await User.find();
     res.json(users);
@@ -25,4 +24,4 @@ router.get('/', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
