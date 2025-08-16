@@ -1,7 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-// import dotenv from "dotenv";
+import dotenv from "dotenv";
 
 dotenv.config();
 const app = express();
@@ -24,7 +24,6 @@ if (!MONGO_URI) {
   console.error("Missing MONGO_URI");
   process.exit(1);
 }
-
 mongoose.connect(MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => { console.error(err); process.exit(1); });
