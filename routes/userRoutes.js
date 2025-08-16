@@ -1,5 +1,5 @@
 import express from "express";
-import User from "../Module.js"; // Make sure Module.js also uses ESM
+import { User } from "../Module.js"; // Make sure Module.js also uses ESM
 
 const router = express.Router();
 
