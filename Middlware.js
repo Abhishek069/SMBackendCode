@@ -1,6 +1,7 @@
-const myMiddlware = (req, res, next) =>{
-    console.log("execuaed the middlwae");
-    next()
-}
+// Middleware function
+const myMiddleware = (req, res, next) => {
+  console.log("executed the middleware");
+  next();
+};
 
-module.exports = myMiddlware
+export default myMiddleware;
