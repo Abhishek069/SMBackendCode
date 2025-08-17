@@ -25,22 +25,17 @@ app.use(express.json());
 app.use(
   cors({
     origin: function (origin, cb) {
-      if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+      // allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
         return cb(null, true);
       }
       return cb(new Error("Not allowed by CORS"));
     },
-    credentials: true,
-  })
-);
-
-app.use(
-  cors({
-    origin: "https://satta-matka-frotend-code.vercel.app", // your frontend domain
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
+
 app.use(myMiddleware);
 
 // --- MongoDB Connection ---
