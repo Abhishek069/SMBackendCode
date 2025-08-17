@@ -12,10 +12,12 @@ const app = express();
 
 // --- Config ---
 const PORT = process.env.PORT || 5000;
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
+  "http://localhost:5173,https://satta-matka-frotend-code.vercel.app")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
 
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/SattaMatka";
