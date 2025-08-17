@@ -33,6 +33,14 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(
+  cors({
+    origin: "https://satta-matka-frotend-code.vercel.app", // your frontend domain
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
 app.use(myMiddleware);
 
 // --- MongoDB Connection ---
