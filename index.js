@@ -25,18 +25,17 @@ app.use(express.json());
 app.use(
   cors({
     origin: function (origin, cb) {
-      // allow requests with no origin (like curl/Postman) or matching allowed list
+      // allow requests with no origin (like mobile apps, curl, Postman)
       if (!origin || ALLOWED_ORIGINS.includes(origin)) {
         return cb(null, true);
       }
-      return cb(new Error("Not allowed by CORS: " + origin));
+      return cb(new Error("Not allowed by CORS"));
     },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
 
-app.options("*", cors());
 app.use(myMiddleware);
 
 // --- MongoDB Connection ---
