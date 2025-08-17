@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   role: { type: String, required: true },
+  mobile:{type: String, required: true},
   password: { type: String, required: true },
-  email: { type: String, required: true }
+  address: { type: String, required: true }
 }, { timestamps: true });
 
 const allGamesSchema = new mongoose.Schema({
@@ -21,6 +22,12 @@ const liveResultSchema = new mongoose.Schema({
   startTime: { type: String, required: true },
   endTime: { type: String, required: true }
 }, { timestamps: true });
+
+
+const AgentListSchema = new mongoose.Schema({
+  name:{type: String, require:true},
+  owner:{type:String, require:true}
+})
 
 const payMentBalanceRateSchema = new mongoose.Schema({
   name: { type: String, required: true },

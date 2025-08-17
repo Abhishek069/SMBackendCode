@@ -22,11 +22,13 @@ router.get("/", async (req, res) => {
 
 // Route: GET /latest-updates
 router.get("/latest-updates", async (req, res) => {
+  console.log("called");
+  
   try {
     const records = await AllGames.find({})
       .sort({ updatedAt: -1 })
       .limit(6);
-
+    console.log(records);
     res.json(records);
   } catch (error) {
     console.error("Error fetching records:", error);

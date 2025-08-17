@@ -1,18 +1,24 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const DataBaseConnect = async() => {
-    try{
-       await mongoose.connect('mongodb://localhost:27017/SattaMatka', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        })
-        console.log("Connection Done For DB")
+const DataBaseConnect = async () => {
+  try {
+    // Get connection string from environment variables
+    const uri = process.env.MONGO_URI;
+
+    if (!uri) {
+      throw new Error("MONGO_URI is not defined in environment variables");
     }
-    catch(error){
-        console.log("Some thing went wrong for the connection", error)
-    }
-}
 
-module.exports = DataBaseConnect
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
 
+    console.log("✅ Connected to MongoDB Atlas");
+  } catch (error) {
+    console.error("❌ Something went wrong while connecting to DB:", error);
+    process.exit(1); // Exit process if DB connection fails
+  }
+};
 
+module.exports = DataBaseConnect;

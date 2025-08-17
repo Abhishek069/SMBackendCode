@@ -11,7 +11,7 @@ import AllGames from "./routes/getAllGames.js";
 const app = express();
 
 // --- Config ---
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
@@ -59,24 +59,7 @@ const TodoSchema = new mongoose.Schema(
 );
 const Todo = mongoose.model("Todo", TodoSchema);
 
-app.get("/api/todos", async (_req, res) => {
-  try {
-    const todos = await Todo.find().lean();
-    res.json(todos);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch todos" });
-  }
-});
-
-app.post("/api/todos", async (req, res) => {
-  try {
-    const todo = await Todo.create({ text: req.body.text, done: false });
-    res.status(201).json(todo);
-  } catch (err) {
-    res.status(400).json({ error: "Failed to create todo" });
-  }
-});
-
+  
 // --- Custom Routes ---
 app.use("/user", userRoutes);
 app.use("/AllGames", AllGames);

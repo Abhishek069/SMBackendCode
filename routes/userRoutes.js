@@ -4,12 +4,16 @@ import { User } from "../Module.js"; // Make sure Module.js also uses ESM
 const router = express.Router();
 
 // Create a user
-router.post("/", async (req, res) => {
+router.post("/addUser", async (req, res) => {
   try {
-    const { name, email } = req.body;
-    const user = await User.create({ name, email });
+    const userDetils = req.body;
+    console.log(userDetils);
+    
+    const user = await User.create(userDetils);
     res.status(201).json(user);
   } catch (err) {
+    console.log(err);
+    
     res.status(400).json({ error: err.message });
   }
 });
