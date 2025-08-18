@@ -5,7 +5,6 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-
 // Create a user
 router.post("/addUser", async (req, res) => {
   try {
@@ -14,7 +13,9 @@ router.post("/addUser", async (req, res) => {
     // Check if user already exists
     const existing = await User.findOne({ mobile });
     if (existing) {
-      return res.status(400).json({ error: "User with this mobile already exists" });
+      return res
+        .status(400)
+        .json({ error: "User with this mobile already exists" });
     }
 
     // Hash password
@@ -25,20 +26,24 @@ router.post("/addUser", async (req, res) => {
       role,
       mobile,
       password: hashedPassword,
-      address
+      address,
     });
 
     res.status(201).json({
-      success:true,
+      success: true,
       message: "User created successfully",
-      user: { id: user._id, name: user.name, role: user.role, mobile: user.mobile }
+      user: {
+        id: user._id,
+        name: user.name,
+        role: user.role,
+        mobile: user.mobile,
+      },
     });
   } catch (err) {
     console.error("Add User Error:", err);
     res.status(400).json({ error: err.message });
   }
 });
-
 
 router.post("/authorize", async (req, res) => {
   try {
@@ -52,15 +57,19 @@ router.post("/authorize", async (req, res) => {
 
     // generate token
     const token = jwt.sign(
-      { id: user._id, role: user.role }, // payload
-      process.env.JWT_SECRET || "supersecretkey", // secret key
-      { expiresIn: "1d" } // token expiry (1 day)
+      {
+        id: user._id,
+        role: user.role,
+        username: user.name, // 👈 add username here
+      },
+      process.env.JWT_SECRET || "supersecretkey",
+      { expiresIn: "2h" }
     );
 
     res.json({
-      success:true,
+      success: true,
       token,
-      role: user.role
+      role: user.role,
     });
   } catch (err) {
     console.error("Login Error:", err);
