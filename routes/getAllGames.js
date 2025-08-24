@@ -92,21 +92,45 @@ router.delete("/deleteGame/:name", async (req, res) => {
 // Route: PUT /updateGame/:id
 router.put("/updateGame/:id", async (req, res) => {
   try {
-    const { resultNo } = req.body;
+    const { resultNo} = req.body; // Expect both from frontend
+    console.log("Update request:", req.body);
+
+    // if (!resultNo || !OpenOrclose) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Both resultNo and OpenOrclose are required",
+    //   });
+    // }
+
+    let updateField = {};
+
+    if (resultNo[3] === "Open") {
+      updateField = { $push: { openNo: resultNo } };
+    } else if (resultNo[3] === "Close") {
+      updateField = { $push: { closeNo: resultNo } };
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OpenOrclose value. Use 'Open' or 'Close'.",
+      });
+    }
 
     const updatedGame = await AllGames.findByIdAndUpdate(
       req.params.id,
-      { $push: { resultNo: resultNo } },
+      updateField,
       { new: true }
     );
 
     if (!updatedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Game not found",
+      });
     }
 
     res.json({
       success: true,
-      message: "Game updated successfully",
+      message: `Game updated successfully with ${resultNo[3]} result`,
       data: updatedGame,
     });
   } catch (err) {
@@ -118,5 +142,7 @@ router.put("/updateGame/:id", async (req, res) => {
     });
   }
 });
+
+
 
 export default router;

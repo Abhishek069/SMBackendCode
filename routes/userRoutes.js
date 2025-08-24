@@ -69,7 +69,6 @@ router.post("/authorize", async (req, res) => {
     res.json({
       success: true,
       token,
-      role: user.role,
     });
   } catch (err) {
     console.error("Login Error:", err);

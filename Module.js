@@ -12,6 +12,8 @@ const allGamesSchema = new mongoose.Schema({
   name: { type: String, required: true },
   owner: { type: String, required: true },
   resultNo: { type: Array },
+  openNo:{type:Array},
+  closeNo:{type:Array},
   startTime: { type: String, required: true },
   endTime: { type: String, required: true }
 }, { timestamps: true });
