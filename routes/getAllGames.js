@@ -321,7 +321,7 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/api/getGameFormLink", async (req, res) => {
-  const { url, username } = req.body;
+  const { url, username,role } = req.body;
   
   try {
     const response = await fetch(url);
@@ -339,9 +339,11 @@ router.post("/api/getGameFormLink", async (req, res) => {
     const results = [];
 
     for (const game of gamesFromApi.data) {
+      
       const dbGame = await AllGames.findOne({ name: game.category_name });
       if (!dbGame) continue;
-
+      // console.log(role);
+      
       // ✅ Ownership check
       if (role !== "Admin" && dbGame.owner !== username) {
         results.push({ 
