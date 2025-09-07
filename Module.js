@@ -15,7 +15,8 @@ const allGamesSchema = new mongoose.Schema({
   openNo:{type:Array},
   closeNo:{type:Array},
   startTime: { type: String, required: true },
-  endTime: { type: String, required: true }
+  endTime: { type: String, required: true },
+  fontSize: { type: String, required: true }
 }, { timestamps: true });
 
 const liveResultSchema = new mongoose.Schema({

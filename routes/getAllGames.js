@@ -404,6 +404,30 @@ function isValidResult(resultArray) {
   return true;
 }
 
+router.put("/saveFontSize/:id", async (req, res) => {
+  try {
+    const { fontSize } = req.body;
+    if (!fontSize) {
+      return res.status(400).json({ success: false, message: "Font size is required" });
+    }
+
+    const updatedGame = await AllGames.findByIdAndUpdate(
+      req.params.id,
+      { fontSize },
+      { new: true }
+    );
+
+    if (!updatedGame) {
+      return res.status(404).json({ success: false, message: "Game not found" });
+    }
+
+    res.json({ success: true, data: updatedGame });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // ---------------- ADD GAME ----------------
 router.post("/addGame", async (req, res) => {
   try {
