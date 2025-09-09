@@ -15,6 +15,7 @@ const allGamesSchema = new mongoose.Schema({
   openNo:{type:Array},
   closeNo:{type:Array},
   startTime: { type: String, required: true },
+  liveTime: { type: Date, default: null },
   endTime: { type: String, required: true },
   fontSize: { type: String, required: true }
 }, { timestamps: true });

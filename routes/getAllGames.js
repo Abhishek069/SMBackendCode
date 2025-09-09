@@ -295,17 +295,60 @@ router.get("/", async (req, res) => {
 });
 
 // ---------------- LATEST UPDATES ----------------
+// ---------------- SET LIVE TIME ----------------
+// ---------------- SET LIVE TIME ----------------
+router.put("/setLiveTime/:id", async (req, res) => {
+  try {
+    const { liveTime } = req.body;
+    if (!liveTime) {
+      return res.status(400).json({ success: false, message: "Live time is required" });
+    }
+
+    const updatedGame = await AllGames.findByIdAndUpdate(
+      req.params.id,
+      { liveTime: new Date(liveTime) },
+      { new: true }
+    );
+
+    if (!updatedGame) {
+      return res.status(404).json({ success: false, message: "Game not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Game live time set successfully",
+      data: updatedGame,
+    });
+  } catch (err) {
+    console.error("Error setting live time:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to set live time",
+      error: err.message,
+    });
+  }
+});
+
+
+// ---------------- LATEST UPDATES ----------------
 router.get("/latest-updates", async (req, res) => {
   try {
-    const records = await AllGames.find({})
-      .sort({ updatedAt: -1 })
+    const now = new Date();
+
+    const records = await AllGames.find({
+      liveTime: { $lte: now }, // only live
+      startTime: { $lte: now } // only if startTime has passed
+    })
+      .sort({ liveTime: -1 })
       .limit(6);
+
     res.json(records);
   } catch (error) {
     console.error("Error fetching records:", error);
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+
 
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
