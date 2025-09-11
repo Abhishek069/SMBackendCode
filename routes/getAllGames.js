@@ -328,6 +328,43 @@ router.put("/setLiveTime/:id", async (req, res) => {
     });
   }
 });
+router.put("/updateNotification/:id", async (req, res) => {
+  try {
+    const { notificationMessage } = req.body;
+    console.log(notificationMessage);
+    
+    if (!notificationMessage) {
+      return res.status(400).json({ success: false, message: "Live time is required" });
+    }
+
+    const updatedGame = await AllGames.findByIdAndUpdate(
+      req.params.id,
+      { Notification_Message: notificationMessage },
+      { new: true }
+    );
+    console.log(updatedGame);
+    
+
+    if (!updatedGame) {
+      return res.status(404).json({ success: false, message: "Game not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Notification Message Update succeefulllt",
+      data: updatedGame,
+    });
+  } catch (err) {
+    console.error("Error setting live time:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to set notifiction",
+      error: err.message,
+    });
+  }
+});
+
+
 
 
 // ---------------- LATEST UPDATES ----------------
