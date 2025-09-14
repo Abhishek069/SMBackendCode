@@ -554,6 +554,30 @@ router.delete("/deleteGame/:name", async (req, res) => {
   }
 });
 
+router.put("/updateColor/:id", async (req, res) => {
+  const gameId = req.params.id;
+  const { nameColor, resultColor, panelColor, notificationColor } = req.body;
+
+  try {
+    // Find game by ID
+    const game = await AllGames.findById(gameId);
+    if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+
+    // Update color fields if provided
+    if (nameColor) game.nameColor = nameColor;
+    if (resultColor) game.resultColor = resultColor;
+    if (panelColor) game.panelColor = panelColor;
+    if (notificationColor) game.notificationColor = notificationColor;
+
+    await game.save();
+
+    res.json({ success: true, message: "Colors updated successfully", data: game });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // ---------------- MANUAL UPDATE ----------------
 router.put("/updateGame/:id", async (req, res) => {
   try {
