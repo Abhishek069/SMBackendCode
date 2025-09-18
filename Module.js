@@ -27,6 +27,9 @@ const allGamesSchema = new mongoose.Schema(
     resultColor: { type: String }, // default black
     panelColor: { type: String }, // default white
     notificationColor: { type: String },
+    valid_date: {type: Date, require: true},
+    amount :{type: String, require:true},
+    method: {type: String, require:true}
   },
   { timestamps: true }
 );

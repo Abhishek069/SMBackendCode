@@ -276,6 +276,40 @@ import { AllGames } from "../Module.js";
 
 const router = express.Router();
 
+
+router.put("/updatePayment/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { gameId, method, amount, date } = req.body;
+
+    if (!gameId) {
+      return res.status(400).json({ success: false, message: "Game ID required" });
+    }
+
+    // 🔹 Example: Update payment info inside Game collection
+    const game = await AllGames.findOneAndUpdate(
+      { _id: gameId }, // make sure game belongs to user
+      {
+        $set: {
+          "payment.method": method,
+          "payment.amount": amount,
+          "payment.date": date,
+        },
+      },
+      { new: true }
+    );
+
+    if (!game) {
+      return res.status(404).json({ success: false, message: "Game not found for user" });
+    }
+
+    res.json({ success: true, message: "Payment updated", game });
+  } catch (err) {
+    console.error("Error updating payment:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // ---------------- GET ALL ----------------
 router.get("/", async (req, res) => {
   try {
