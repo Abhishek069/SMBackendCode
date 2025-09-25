@@ -10,17 +10,18 @@ router.post("/addUser", async (req, res) => {
   try {
     const { name, role, mobile, password, address } = req.body;
 
-    // Check if user already exists
+    // 🔹 Check if user already exists by mobile
     const existing = await User.findOne({ mobile });
     if (existing) {
       return res
         .status(400)
-        .json({ error: "User with this mobile already exists" });
+        .json({ success: false, message: "User with this mobile already exists" });
     }
 
-    // Hash password
+    // 🔹 Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 🔹 Create new user
     const user = await User.create({
       name,
       role,
@@ -41,9 +42,25 @@ router.post("/addUser", async (req, res) => {
     });
   } catch (err) {
     console.error("Add User Error:", err);
-    res.status(400).json({ error: err.message });
+    
+    // ✅ Handle duplicate key error
+    if (err.code === 11000) {
+      if (err.keyPattern?.mobile) {
+        return res
+          .status(200)
+          .json({ success: false, message: `User with mobile "${req.body.mobile}" already exists.` });
+      }
+      if (err.keyPattern?.name) {
+        return res
+          .status(200)
+          .json({ success: false, message: `User with name "${req.body.name}" already exists.` });
+      }
+    }
+
+    res.status(400).json({ success: false, error: err.message });
   }
 });
+
 
 router.post("/authorize", async (req, res) => {
   try {

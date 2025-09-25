@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     role: { type: String, required: true },
     mobile: { type: String, required: true },
     password: { type: String, required: true },
@@ -13,13 +13,13 @@ const userSchema = new mongoose.Schema(
 
 const allGamesSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true },
     owner: { type: String, required: true },
     resultNo: { type: Array },
     openNo: { type: Array },
     closeNo: { type: Array },
     startTime: { type: String, required: true },
-    liveTime: { type: Date, default: null },
+    liveTime: { type: Number, default: null },
     endTime: { type: String, required: true },
     fontSize: { type: String },
     Notification_Message: { type: Array },

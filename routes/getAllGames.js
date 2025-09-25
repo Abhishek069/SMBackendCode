@@ -334,13 +334,15 @@ router.get("/", async (req, res) => {
 router.put("/setLiveTime/:id", async (req, res) => {
   try {
     const { liveTime } = req.body;
-    if (!liveTime) {
+
+    if (liveTime === undefined || liveTime === null) {
       return res.status(400).json({ success: false, message: "Live time is required" });
     }
 
+    // Save liveTime as a number directly
     const updatedGame = await AllGames.findByIdAndUpdate(
       req.params.id,
-      { liveTime: new Date(liveTime) },
+      { liveTime: Number(liveTime) },
       { new: true }
     );
 
@@ -362,6 +364,8 @@ router.put("/setLiveTime/:id", async (req, res) => {
     });
   }
 });
+
+
 router.put("/updateNotification/:id", async (req, res) => {
   try {
     const { notificationMessage } = req.body;
@@ -406,19 +410,106 @@ router.get("/latest-updates", async (req, res) => {
   try {
     const now = new Date();
 
-    const records = await AllGames.find({
-      liveTime: { $lte: now }, // only live
-      startTime: { $lte: now } // only if startTime has passed
-    })
-      .sort({ liveTime: -1 })
-      .limit(6);
+    // Convert current UTC time to IST
+    let hours = now.getUTCHours() + 5;
+    let minutes = now.getUTCMinutes() + 30;
 
-    res.json(records);
+    // Handle overflow
+    if (minutes >= 60) {
+      minutes -= 60;
+      hours += 1;
+    }
+    if (hours >= 24) {
+      hours -= 24;
+    }
+
+    const nowInMinutes = hours * 60 + minutes;
+
+    const allGames = await AllGames.find({});
+
+    const records = allGames.filter((game) => {
+      if (!game.startTime) return false;
+
+      // Determine the window in minutes
+      const windowMinutes = game.liveTime ? Number(game.liveTime) : 10;
+      const windowEndInMinutes = nowInMinutes + windowMinutes;
+
+      const [startH, startM] = game.startTime.split(":").map(Number);
+      const startInMinutes = startH * 60 + startM;
+
+      // Show games whose startTime is within the calculated window
+      return startInMinutes >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+    });
+
+    // Sort by startTime ascending (soonest first) and limit 6
+    const sortedRecords = records
+      .sort((a, b) => {
+        const [aH, aM] = a.startTime.split(":").map(Number);
+        const [bH, bM] = b.startTime.split(":").map(Number);
+        return aH * 60 + aM - (bH * 60 + bM);
+      })
+
+    res.json(sortedRecords);
   } catch (error) {
     console.error("Error fetching records:", error);
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+
+
+// router.get("/latest-updates", async (req, res) => {
+//   try {
+//     const now = new Date();
+
+//     // Convert current time to IST
+//     const istHours = now.getUTCHours() + 5;
+//     const istMinutes = now.getUTCMinutes() + 30;
+//     let hours = istHours;
+//     let minutes = istMinutes;
+
+//     // Handle overflow for minutes > 59
+//     if (minutes >= 60) {
+//       minutes -= 60;
+//       hours += 1;
+//     }
+//     if (hours >= 24) {
+//       hours -= 24;
+//     }
+
+//     // Current IST in minutes
+//     const nowInMinutes = hours * 60 + minutes;
+//     const tenMinutesAgoInMinutes = nowInMinutes - 10;
+
+//     // Fetch all live games
+//     const allGames = await AllGames.find({});
+
+//     const records = allGames.filter((game) => {
+//       if (!game.startTime) return false;
+
+//       const [hh, mm] = game.startTime.split(":").map(Number);
+//       console.log(hh,mm,typeof(hh),typeof(mm));
+      
+//       const gameStartInMinutes = hh * 60 + mm;
+//       console.log(gameStartInMinutes , tenMinutesAgoInMinutes , gameStartInMinutes , nowInMinutes);
+      
+//       // Check if startTime is within last 10 minutes
+//       return gameStartInMinutes >= tenMinutesAgoInMinutes && gameStartInMinutes <= nowInMinutes;
+//     });
+
+//     // Sort by liveTime descending and limit 6
+//     const sortedRecords = records
+//       .sort((a, b) => new Date(b.liveTime) - new Date(a.liveTime))
+//       .slice(0, 6);
+
+//     res.json(sortedRecords);
+//   } catch (error) {
+//     console.error("Error fetching records:", error);
+//     res.status(500).json({ error: "Failed to fetch records" });
+//   }
+// });
+
+
+
 
 
 // ---------------- GET BY ID ----------------
@@ -435,12 +526,14 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/api/getGameFormLink", async (req, res) => {
-  const { url, username,role } = req.body;
-  
+  const { url, userName,admin } = req.body;
+  console.log("called");
   try {
     const response = await fetch(url);
+    console.log(response);
+    
     const gamesFromApi = await response.json();
-    // console.log(gamesFromApi.data);
+    console.log(gamesFromApi.data);
     
 
     if (!Array.isArray(gamesFromApi.data)) {
@@ -459,7 +552,7 @@ router.post("/api/getGameFormLink", async (req, res) => {
       // console.log(role);
       
       // ✅ Ownership check
-      if (role !== "Admin" && dbGame.owner !== username) {
+      if (admin !== "Admin" && dbGame.owner !== userName) {
         results.push({ 
           game: game.category_name, 
           status: "skipped - not owner" 
@@ -555,6 +648,15 @@ router.post("/addGame", async (req, res) => {
     });
   } catch (err) {
     console.error("Error adding new game:", err);
+
+    // ✅ Handle duplicate game name error
+    if (err.code === 11000 && err.keyPattern?.name) {
+      return res.status(400).json({
+        success: false,
+        message: `Game with name "${req.body.name}" already exists.`,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: "Failed to add game.",
@@ -562,6 +664,7 @@ router.post("/addGame", async (req, res) => {
     });
   }
 });
+
 
 // ---------------- DELETE GAME ----------------
 router.delete("/deleteGame/:name", async (req, res) => {
@@ -614,6 +717,8 @@ router.put("/updateColor/:id", async (req, res) => {
 
 // ---------------- MANUAL UPDATE ----------------
 router.put("/updateGame/:id", async (req, res) => {
+  console.log(req.body);
+  
   try {
     const { resultNo } = req.body;
 
