@@ -11,11 +11,18 @@ router.post("/addUser", async (req, res) => {
     const { name, role, mobile, password, address } = req.body;
 
     // 🔹 Check if user already exists by mobile
-    const existing = await User.findOne({ mobile });
+    let existing = await User.findOne({ mobile });
     if (existing) {
       return res
         .status(400)
         .json({ success: false, message: "User with this mobile already exists" });
+    }
+
+    existing = await User.findOne({ name }); // Re-use the existing variable
+    if (existing) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User with this name already exists." });
     }
 
     // 🔹 Hash password
