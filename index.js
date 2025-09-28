@@ -13,7 +13,7 @@ const app = express();
 // --- Config ---
 const PORT = process.env.PORT || 5000;
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
-  "http://localhost:5173,https://satta-matka-frotend-code-gpqv7aox4-abhishek069s-projects.vercel.app")
+  "http://localhost:5173,https://satta-matka-frotend-code.vercel.app")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
