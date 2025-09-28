@@ -171,25 +171,27 @@ router.get("/latest-updates", async (req, res) => {
       return startInMinutes >= nowInMinutes && startInMinutes <= windowEndInMinutes;
     });
 
-    // Sort by startTime ascending (soonest first) and limit 6
-    const sortedRecords = records
-      .sort((a, b) => {
-        const [aH, aM] = a.startTime.split(":").map(Number);
-        const [bH, bM] = b.startTime.split(":").map(Number);
-        return aH * 60 + aM - (bH * 60 + bM);
-      })
-    const isDataPresent = sortedRecords.length !== 0 
-    if(!isDataPresent){
-      res.status(200).json({message: "Data is not presetn", hasData:isDataPresent});
-    }
-    else{
-      res.status(200).json({message: "There is data", hasData:isDataPresent, data: sortedRecords});
-    }
+    // Sort by startTime ascending (soonest first)
+    const sortedRecords = records.sort((a, b) => {
+      const [aH, aM] = a.startTime.split(":").map(Number);
+      const [bH, bM] = b.startTime.split(":").map(Number);
+      return aH * 60 + aM - (bH * 60 + bM);
+    });
+
+    const isDataPresent = sortedRecords.length > 0;
+
+    // ✅ Always send "data" as an array
+    res.status(200).json({
+      message: isDataPresent ? "There is data" : "Data is not present",
+      hasData: isDataPresent,
+      data: sortedRecords, // will be [] if no records
+    });
   } catch (error) {
     console.error("Error fetching records:", error);
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+
 
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
