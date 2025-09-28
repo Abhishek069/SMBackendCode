@@ -73,41 +73,50 @@ router.post("/authorize", async (req, res) => {
   try {
     const { mobile, password } = req.body;
 
+    // 1️⃣ Check if user exists
     const user = await User.findOne({ mobile });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
 
+    // 2️⃣ Check if password matches
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(200).json({ success: false, error: "Incorrect password" });
+    }
 
-    // generate token
-    console.log(user.role);
-    
+    // 3️⃣ Generate token with 1-minute expiry
     const token = jwt.sign(
       {
         id: user._id,
         role: user.role,
-        username: user.name, // 👈 add username here
+        username: user.name,
       },
       process.env.JWT_SECRET || "supersecretkey",
-      { expiresIn: "2h" }
+      { expiresIn: "1h" } // 1 minute
     );
 
+    // 4️⃣ Send success response
     res.json({
       success: true,
       token,
-      role:user.role,
+      role: user.role,
+      username: user.name, // optionally send name to frontend
     });
   } catch (err) {
     console.error("Login Error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ success: false, error: "Server error" });
   }
 });
+
 
 // Get all users
 router.get("/", async (_req, res) => {
   try {
     const users = await User.find();
-    res.json(users);
+    console.log(users);
+    
+    res.status(200).json({success: true, data: users});
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

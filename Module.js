@@ -29,7 +29,8 @@ const allGamesSchema = new mongoose.Schema(
     notificationColor: { type: String },
     valid_date: {type: Date, require: true},
     amount :{type: String, require:true},
-    method: {type: String, require:true}
+    method: {type: String, require:true},
+    status:{type: String, require:true}
   },
   { timestamps: true }
 );

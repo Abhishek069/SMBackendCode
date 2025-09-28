@@ -1,273 +1,3 @@
-// import express from "express";
-// import fetch from "node-fetch";
-// import jwt from "jsonwebtoken";
-// // import Game from "../models/Game.js";
-// import { AllGames } from "../Module.js"; // make sure Module.js also uses ESM
-// const router = express.Router();
-
-// // Route: GET /
-// router.get("/", async (req, res) => {
-//   try {
-//     const users = await AllGames.find();
-//     res.status(200).json({
-//       success: true,
-//       message: "Fetched all user data successfully",
-//       data: users,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to fetch user data",
-//       error: error.message,
-//     });
-//   }
-// });
-
-// // Route: GET /latest-updates
-// router.get("/latest-updates", async (req, res) => {
-//   try {
-//     const records = await AllGames.find({})
-//       .sort({ updatedAt: -1 })
-//       .limit(6);
-//     res.json(records);
-//   } catch (error) {
-//     console.error("Error fetching records:", error);
-//     res.status(500).json({ error: "Failed to fetch records" });
-//   }
-// });
-
-// // Route: GET /:id
-// router.get("/:id", async (req, res) => {
-//   try {
-//     const game = await AllGames.findById(req.params.id);
-//     if (!game) {
-//       return res
-//         .status(404)
-//         .json({ success: false, message: "Game not found" });
-//     }
-//     res.json({ success: true, data: game });
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// });
-
-
-// // router.post("/api/getGameFormLink/", async (req, res) => {
-// //   console.log(req.body);
-// //   const { url } = req.body;
-
-// //   try {
-// //     const response = await fetch(url);
-// //     const data = await response.json(); // parse JSON directly
-// //     res.status(200).json({ data });
-// //   } catch (err) {
-// //     console.error(err);
-// //     res.status(500).json({ error: "Failed to fetch results" });
-// //   }
-// // });
-//  // adjust import path
-
-// router.post("/api/getGameFormLink", async (req, res) => {
-//   const { url } = req.body;
-//   const token = req.headers.authorization?.split(" ")[1];
-
-//   if (!token) {
-//     return res.status(401).json({ error: "Unauthorized - No token provided" });
-//   }
-
-//   let decoded;
-//   try {
-//     decoded = jwt.verify(token, process.env.JWT_SECRET);
-//   } catch (err) {
-//     return res.status(403).json({ error: "Invalid token" });
-//   }
-
-//   const { username, role } = decoded;
-
-//   try {
-//     const response = await fetch(url);
-//     const gamesFromApi = await response.json();
-
-//     if (!Array.isArray(gamesFromApi)) {
-//       return res.status(400).json({ error: "Invalid API response format" });
-//     }
-
-//     const today = new Date();
-//     const dayName = today.toLocaleDateString("en-US", { weekday: "long" });
-
-//     const results = [];
-
-//     for (const game of gamesFromApi) {
-//       const dbGame = await Game.findOne({ name: game.category_name });
-//       if (!dbGame) continue;
-
-//       // ✅ Ownership check
-//       if (role !== "Admin" && dbGame.owner !== username) {
-//         results.push({ 
-//           game: game.category_name, 
-//           status: "skipped - not owner" 
-//         });
-//         continue;
-//       }
-
-//       // ✅ Build result
-//       const resultArray = [
-//         game.value1,
-//         game.value2,
-//         game.value3,
-//         today,
-//         "Open",
-//         dayName,
-//       ];
-
-//       // ✅ Validate before saving
-//       if (!isValidResult(resultArray)) {
-//         results.push({ game: game.category_name, status: "skipped - invalid result" });
-//         continue;
-//       }
-
-//       // ✅ Update DB
-//       await Game.findByIdAndUpdate(dbGame._id, {
-//         $push: { resultNo: resultArray, openNo: resultArray },
-//         updatedAt: new Date(),
-//       });
-
-//       results.push({ game: game.category_name, status: "updated" });
-//     }
-
-//     res.status(200).json({ success: true, results });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Failed to fetch results" });
-//   }
-// });
-
-// // helper validation
-// function isValidResult(resultArray) {
-//   const mainNumber = resultArray[0];
-//   if (!/^\d+$/.test(mainNumber)) return false;
-
-//   if (mainNumber.length >= 2) {
-//     const first = parseInt(mainNumber[0], 10);
-//     const second = parseInt(mainNumber[1], 10);
-//     if (first >= second) return false;
-//   }
-
-//   if (mainNumber.length >= 3) {
-//     const lastThree = mainNumber.slice(-3).split("").map(Number);
-//     const sum = lastThree.reduce((a, b) => a + b, 0);
-//     const expectedCheckDigit = sum % 10;
-//     const providedCheck = parseInt(resultArray[1], 10);
-//     if (!isNaN(providedCheck) && providedCheck !== expectedCheckDigit) {
-//       return false;
-//     }
-//   }
-
-//   return true;
-// }
-
-
-
-// // Route: POST /addGame
-// router.post("/addGame", async (req, res) => {
-//   try {
-//     const newGameData = req.body;
-//     const newGame = new AllGames(newGameData);
-//     const savedGame = await newGame.save();
-
-//     res
-//       .status(201)
-//       .json({ success: true, message: "Game added successfully!", data: savedGame });
-//   } catch (err) {
-//     console.error("Error adding new game:", err);
-//     res
-//       .status(500)
-//       .json({ success: false, message: "Failed to add game.", error: err.message });
-//   }
-// });
-
-// // Route: DELETE /deleteGame/:name
-// router.delete("/deleteGame/:name", async (req, res) => {
-//   try {
-//     const gameName = req.params.name;
-//     const deletedGame = await AllGames.findOneAndDelete({ name: gameName });
-
-//     if (!deletedGame) {
-//       return res.status(404).json({ success: false, message: "Game not found" });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Game deleted successfully!",
-//       data: deletedGame,
-//     });
-//   } catch (err) {
-//     console.error("Error deleting game:", err);
-//     res
-//       .status(500)
-//       .json({ success: false, message: "Failed to delete game.", error: err.message });
-//   }
-// });
-
-// // Route: PUT /updateGame/:id
-// router.put("/updateGame/:id", async (req, res) => {
-//   try {
-//     const { resultNo} = req.body; // Expect both from frontend
-//     console.log("Update request:", req.body);
-
-//     // if (!resultNo || !OpenOrclose) {
-//     //   return res.status(400).json({
-//     //     success: false,
-//     //     message: "Both resultNo and OpenOrclose are required",
-//     //   });
-//     // }
-
-//     let updateField = {};
-
-//     if (resultNo[3] === "Open") {
-//       updateField = { $push: { openNo: resultNo } };
-//     } else if (resultNo[3] === "Close") {
-//       updateField = { $push: { closeNo: resultNo } };
-//     } else {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid OpenOrclose value. Use 'Open' or 'Close'.",
-//       });
-//     }
-
-//     const updatedGame = await AllGames.findByIdAndUpdate(
-//       req.params.id,
-//       updateField,
-//       { new: true }
-//     );
-
-//     if (!updatedGame) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Game not found",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: `Game updated successfully with ${resultNo[3]} result`,
-//       data: updatedGame,
-//     });
-//   } catch (err) {
-//     console.error("Error updating game:", err);
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to update game",
-//       error: err.message,
-//     });
-//   }
-// });
-
-
-
-// export default router;
-
-
 import express from "express";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
@@ -369,7 +99,7 @@ router.put("/setLiveTime/:id", async (req, res) => {
 router.put("/updateNotification/:id", async (req, res) => {
   try {
     const { notificationMessage } = req.body;
-    console.log(notificationMessage);
+    // console.log(notificationMessage);
     
     if (!notificationMessage) {
       return res.status(400).json({ success: false, message: "Live time is required" });
@@ -380,7 +110,7 @@ router.put("/updateNotification/:id", async (req, res) => {
       { Notification_Message: notificationMessage },
       { new: true }
     );
-    console.log(updatedGame);
+    // console.log(updatedGame);
     
 
     if (!updatedGame) {
@@ -448,69 +178,18 @@ router.get("/latest-updates", async (req, res) => {
         const [bH, bM] = b.startTime.split(":").map(Number);
         return aH * 60 + aM - (bH * 60 + bM);
       })
-
-    res.json(sortedRecords);
+    const isDataPresent = sortedRecords.length !== 0 
+    if(!isDataPresent){
+      res.status(200).json({message: "Data is not presetn", hasData:isDataPresent});
+    }
+    else{
+      res.status(200).json({message: "There is data", hasData:isDataPresent, data: sortedRecords});
+    }
   } catch (error) {
     console.error("Error fetching records:", error);
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
-
-
-// router.get("/latest-updates", async (req, res) => {
-//   try {
-//     const now = new Date();
-
-//     // Convert current time to IST
-//     const istHours = now.getUTCHours() + 5;
-//     const istMinutes = now.getUTCMinutes() + 30;
-//     let hours = istHours;
-//     let minutes = istMinutes;
-
-//     // Handle overflow for minutes > 59
-//     if (minutes >= 60) {
-//       minutes -= 60;
-//       hours += 1;
-//     }
-//     if (hours >= 24) {
-//       hours -= 24;
-//     }
-
-//     // Current IST in minutes
-//     const nowInMinutes = hours * 60 + minutes;
-//     const tenMinutesAgoInMinutes = nowInMinutes - 10;
-
-//     // Fetch all live games
-//     const allGames = await AllGames.find({});
-
-//     const records = allGames.filter((game) => {
-//       if (!game.startTime) return false;
-
-//       const [hh, mm] = game.startTime.split(":").map(Number);
-//       console.log(hh,mm,typeof(hh),typeof(mm));
-      
-//       const gameStartInMinutes = hh * 60 + mm;
-//       console.log(gameStartInMinutes , tenMinutesAgoInMinutes , gameStartInMinutes , nowInMinutes);
-      
-//       // Check if startTime is within last 10 minutes
-//       return gameStartInMinutes >= tenMinutesAgoInMinutes && gameStartInMinutes <= nowInMinutes;
-//     });
-
-//     // Sort by liveTime descending and limit 6
-//     const sortedRecords = records
-//       .sort((a, b) => new Date(b.liveTime) - new Date(a.liveTime))
-//       .slice(0, 6);
-
-//     res.json(sortedRecords);
-//   } catch (error) {
-//     console.error("Error fetching records:", error);
-//     res.status(500).json({ error: "Failed to fetch records" });
-//   }
-// });
-
-
-
-
 
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
@@ -527,13 +206,13 @@ router.get("/:id", async (req, res) => {
 
 router.post("/api/getGameFormLink", async (req, res) => {
   const { url, userName,admin } = req.body;
-  console.log("called");
+  // console.log("called");
   try {
     const response = await fetch(url);
-    console.log(response);
+    // console.log(response);
     
     const gamesFromApi = await response.json();
-    console.log(gamesFromApi.data);
+    // console.log(gamesFromApi.data);
     
 
     if (!Array.isArray(gamesFromApi.data)) {
@@ -717,7 +396,7 @@ router.put("/updateColor/:id", async (req, res) => {
 
 // ---------------- MANUAL UPDATE ----------------
 router.put("/updateGame/:id", async (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   
   try {
     const { resultNo } = req.body;
@@ -762,5 +441,45 @@ router.put("/updateGame/:id", async (req, res) => {
     });
   }
 });
+
+router.put("/updateGame/:id", async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    // update only the status field
+    const updatedGame = await AllGames.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedGame) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Game status updated successfully",
+      data: updatedGame,
+    });
+  } catch (err) {
+    console.error("Error updating game status:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update game status",
+      error: err.message,
+    });
+  }
+});
+
 
 export default router;
