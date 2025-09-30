@@ -444,7 +444,7 @@ router.put("/updateGame/:id", async (req, res) => {
   }
 });
 
-router.put("/updateGame/:id", async (req, res) => {
+router.put("/updateStatus/:id", async (req, res) => {
   try {
     const { status } = req.body;
 

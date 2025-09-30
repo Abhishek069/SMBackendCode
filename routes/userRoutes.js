@@ -93,7 +93,7 @@ router.post("/authorize", async (req, res) => {
         username: user.name,
       },
       process.env.JWT_SECRET || "supersecretkey",
-      { expiresIn: "1h" } // 1 minute
+      { expiresIn: "2h" } // 1 minute
     );
 
     // 4️⃣ Send success response
