@@ -7,6 +7,7 @@ import cors from "cors";
 import myMiddleware from "./Middlware.js";
 import userRoutes from "./routes/userRoutes.js";
 import AllGames from "./routes/getAllGames.js";
+import notiFection from './routes/notiFection.js'
 
 const app = express();
 
@@ -68,6 +69,9 @@ const Todo = mongoose.model("Todo", TodoSchema);
 // --- Custom Routes ---
 app.use("/user", userRoutes);
 app.use("/AllGames", AllGames);
+app.use("/Notification", notiFection);
 
 // --- Start Server ---
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+});

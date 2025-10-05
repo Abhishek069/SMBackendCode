@@ -62,6 +62,8 @@ router.get("/", async (req, res) => {
 // ---------------- SET LIVE TIME ----------------
 // ---------------- SET LIVE TIME ----------------
 router.put("/setLiveTime/:id", async (req, res) => {
+  console.log("calls");
+  
   try {
     const { liveTime } = req.body;
 
@@ -161,14 +163,14 @@ router.get("/latest-updates", async (req, res) => {
       if (!game.startTime) return false;
 
       // Determine the window in minutes
-      const windowMinutes = game.liveTime ? Number(game.liveTime) : 10;
+      const windowMinutes = game.liveTime ? Number(game.liveTime) : 15;
       const windowEndInMinutes = nowInMinutes + windowMinutes;
 
       const [startH, startM] = game.startTime.split(":").map(Number);
       const startInMinutes = startH * 60 + startM;
 
       // Show games whose startTime is within the calculated window
-      return startInMinutes >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+      return startInMinutes+game.liveTime >= nowInMinutes && startInMinutes <= windowEndInMinutes;
     });
 
     // Sort by startTime ascending (soonest first)
@@ -191,6 +193,71 @@ router.get("/latest-updates", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+// router.get("/latest-updates", async (req, res) => {
+//   console.log("called");
+  
+//   try {
+//     const now = new Date();
+
+//     // Convert UTC to IST
+//     let hours = now.getUTCHours() + 5;
+//     let minutes = now.getUTCMinutes() + 30;
+
+//     if (minutes >= 60) {
+//       minutes -= 60;
+//       hours += 1;
+//     }
+//     if (hours >= 24) {
+//       hours -= 24;
+//     }
+
+//     const nowInMinutes = hours * 60 + minutes;
+
+//     const allGames = await AllGames.find({});
+
+//     // --- Upcoming games (within next 15 minutes) ---
+//     const upcoming = allGames.filter((game) => {
+//       if (!game.startTime) return false;
+
+//       const [startH, startM] = game.startTime.split(":").map(Number);
+//       const startInMinutes = startH * 60 + startM;
+
+//       // Show only games starting within the next 15 min
+//       return startInMinutes > nowInMinutes && startInMinutes <= nowInMinutes + 15;
+//     });
+
+//     // --- Live games (startTime <= now < startTime + liveTime) ---
+//     const live = allGames.filter((game) => {
+//       if (!game.startTime || !game.liveTime) return false;
+
+//       const [startH, startM] = game.startTime.split(":").map(Number);
+//       const startInMinutes = startH * 60 + startM;
+//       const liveDuration = Number(game.liveTime);
+
+//       // Game is live if current time is within [startTime, startTime + liveTime]
+//       return nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration;
+//     });
+
+//     // Sort both arrays by startTime
+//     const sortByTime = (a, b) => {
+//       const [aH, aM] = a.startTime.split(":").map(Number);
+//       const [bH, bM] = b.startTime.split(":").map(Number);
+//       return aH * 60 + aM - (bH * 60 + bM);
+//     };
+
+//     const sortedUpcoming = upcoming.sort(sortByTime);
+//     const sortedLive = live.sort(sortByTime);
+
+//     res.status(200).json({
+//       upcoming: sortedUpcoming,
+//       live: sortedLive,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching records:", error);
+//     res.status(500).json({ error: "Failed to fetch records" });
+//   }
+// });
+
 
 
 // ---------------- GET BY ID ----------------
