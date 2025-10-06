@@ -29,10 +29,10 @@ const allGamesSchema = new mongoose.Schema(
     resultColor: { type: String }, // default black
     panelColor: { type: String }, // default white
     notificationColor: { type: String },
-    valid_date: {type: Date, required: true}, // Corrected 'require' to 'required'
-    amount :{type: String, required:true}, // Corrected 'require' to 'required'
-    method: {type: String, required:true}, // Corrected 'require' to 'required'
-    status:{type: String, required:true} // Corrected 'require' to 'required'
+    valid_date: {type: Date}, // Corrected 'require' to 'required'
+    amount :{type: String}, // Corrected 'require' to 'required'
+    method: {type: String}, // Corrected 'require' to 'required'
+    status:{type: String} // Corrected 'require' to 'required'
   },
   { timestamps: true }
 );
