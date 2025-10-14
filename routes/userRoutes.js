@@ -114,7 +114,7 @@ router.post("/authorize", async (req, res) => {
 router.get("/", async (_req, res) => {
   try {
     const users = await User.find();
-    console.log(users);
+    // console.log(users);
     
     res.status(200).json({success: true, data: users});
   } catch (err) {

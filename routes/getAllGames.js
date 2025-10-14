@@ -163,18 +163,36 @@ router.get("/latest-updates", async (req, res) => {
       if (!game.startTime) return false;
 
       // Determine the window in minutes
-      const windowMinutes = game.liveTime ? Number(game.liveTime) : 15;
+      const windowMinutes = 15;
       const windowEndInMinutes = nowInMinutes + windowMinutes;
 
       const [startH, startM] = game.startTime.split(":").map(Number);
       const startInMinutes = startH * 60 + startM;
+      const liveTiem = game.liveTime ? game.liveTime : 10
 
       // Show games whose startTime is within the calculated window
-      return startInMinutes+game.liveTime >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+      return startInMinutes+liveTiem >= nowInMinutes && startInMinutes <= windowEndInMinutes;
     });
 
+    const end_records = allGames.filter((game) => {
+      if (!game.endTime) return false;
+
+      // Determine the window in minutes
+      const windowMinutes = 15;
+      const windowEndInMinutes = nowInMinutes + windowMinutes;
+
+      const [startH, startM] = game.endTime.split(":").map(Number);
+      const startInMinutes = startH * 60 + startM;
+      const liveTiem = game.liveTime ? game.liveTime : 10
+
+      // Show games whose startTime is within the calculated window
+      return startInMinutes+liveTiem >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+    });
+
+    const combinedData = records.concat(end_records)
+
     // Sort by startTime ascending (soonest first)
-    const sortedRecords = records.sort((a, b) => {
+    const sortedRecords = combinedData.sort((a, b) => {
       const [aH, aM] = a.startTime.split(":").map(Number);
       const [bH, bM] = b.startTime.split(":").map(Number);
       return aH * 60 + aM - (bH * 60 + bM);
@@ -193,6 +211,92 @@ router.get("/latest-updates", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+
+// router.get("/latest-updates", async (req, res) => {
+//   try {
+//     // 🕒 Get current IST time
+//     const nowUTC = new Date();
+//     const nowIST = new Date(nowUTC.getTime() + 5.5 * 60 * 60 * 1000); // UTC → IST
+//     const nowInMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
+
+//     // 🎮 Fetch all games
+//     const allGames = await AllGames.find({});
+
+//     const records = allGames.filter((game) => {
+//       if (!game.startTime) return false;
+
+//       // ⏰ Convert startTime to total minutes
+//       const [startH, startM] = game.startTime.split(":").map(Number);
+//       const startInMinutes = startH * 60 + startM;
+
+//       // 🕓 Convert endTime (if present)
+//       let endInMinutes = null;
+//       if (game.endTime) {
+//         const [endH, endM] = game.endTime.split(":").map(Number);
+//         endInMinutes = endH * 60 + endM;
+//       }
+
+        
+      
+//       // ⏳ liveTime in minutes (default 15)
+//       const liveTime = Number(game.liveTime) || 15;
+      
+//       // 🧩 1️⃣ Start-based window
+//       const startShowStart = startInMinutes - 15;
+//       const startShowEnd = startInMinutes + liveTime;
+      
+//       console.log(endInMinutes,nowInMinutes,startShowStart,startShowEnd);
+//       // 🧩 2️⃣ End-based window (only if endTime exists)
+//       let endShowStart = null;
+//       let endShowEnd = null;
+//       if (endInMinutes !== null) {
+//         endShowStart = endInMinutes - 15;
+//         endShowEnd = endInMinutes + liveTime;
+//       }
+
+//       // 🕕 Handle midnight wrap (if window crosses 00:00)
+//       const adjustForMidnight = (time) => (time < 0 ? time + 1440 : time % 1440);
+//       const nowAdj = nowInMinutes;
+//       const sStart = adjustForMidnight(startShowStart);
+//       const sEnd = adjustForMidnight(startShowEnd);
+//       const eStart = endShowStart !== null ? adjustForMidnight(endShowStart) : null;
+//       const eEnd = endShowEnd !== null ? adjustForMidnight(endShowEnd) : null;
+
+//       // ✅ Check if now is within either window
+//       const inStartWindow =
+//         (sStart <= sEnd && nowAdj >= sStart && nowAdj <= sEnd) ||
+//         (sStart > sEnd && (nowAdj >= sStart || nowAdj <= sEnd)); // for midnight wrap
+
+//       const inEndWindow =
+//         eStart !== null &&
+//         ((eStart <= eEnd && nowAdj >= eStart && nowAdj <= eEnd) ||
+//           (eStart > eEnd && (nowAdj >= eStart || nowAdj <= eEnd)));
+
+//       return inStartWindow || inEndWindow;
+//     });
+
+//     // 🔢 Sort by startTime ascending
+//     const sortedRecords = records.sort((a, b) => {
+//       const [aH, aM] = a.startTime.split(":").map(Number);
+//       const [bH, bM] = b.startTime.split(":").map(Number);
+//       return aH * 60 + aM - (bH * 60 + bM);
+//     });
+//     console.log({message: sortedRecords.length ? "There is data" : "Data is not present",
+//       hasData: sortedRecords.length > 0,
+//       data: sortedRecords,});
+    
+//     // 📦 Respond with data
+//     res.status(200).json({
+//       message: sortedRecords.length ? "There is data" : "Data is not present",
+//       hasData: sortedRecords.length > 0,
+//       data: sortedRecords,
+//     });
+//   } catch (error) {
+//     console.error("Error fetching records:", error);
+//     res.status(500).json({ error: "Failed to fetch records" });
+//   }
+// });
+
 // router.get("/latest-updates", async (req, res) => {
 //   console.log("called");
   
@@ -234,10 +338,15 @@ router.get("/latest-updates", async (req, res) => {
 //       const startInMinutes = startH * 60 + startM;
 //       const liveDuration = Number(game.liveTime);
 
+//       console.log(nowInMinutes , startInMinutes, nowInMinutes , startInMinutes,  liveDuration);
+//       console.log(nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration);
+      
 //       // Game is live if current time is within [startTime, startTime + liveTime]
 //       return nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration;
 //     });
 
+//     console.log(live);
+    
 //     // Sort both arrays by startTime
 //     const sortByTime = (a, b) => {
 //       const [aH, aM] = a.startTime.split(":").map(Number);
