@@ -2,10 +2,96 @@ import express from "express";
 import fetch from "node-fetch";
 import jwt from "jsonwebtoken";
 import { AllGames } from "../Module.js";
+import dayjs from "dayjs";
+
 // import { JWT_SECRET } from "../config.js"
 
 const router = express.Router();
 
+// ---------------- UPDATE GAME DATA FROM FRONTEND JSON ----------------
+router.post("/updateGamesData", async (req, res) => {
+  console.log("hello I hitted", req);
+  
+  try {
+    const records = req.body; // The frontend will send JSON array here
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid or empty data received. Expected an array of records.",
+      });
+    }
+
+    const getDayFromDate = (dateStr) => dayjs(dateStr).format("dddd");
+
+    let updatedGames = 0;
+    let newGames = 0;
+
+    for (const record of records) {
+      const { category_name, date, open_pana, open_close, close_pana } = record;
+
+      if (!category_name || !open_pana || !close_pana || !open_close || !date)
+        continue;
+
+      const openDigit = open_close[0];
+      const closeDigit = open_close[1];
+      const day = getDayFromDate(date);
+      const dateTime = new Date(date).toISOString();
+
+      // Prepare entries
+      const openEntry = [open_pana, openDigit, dateTime, "Open", day];
+      const closeEntry = [close_pana, closeDigit, dateTime, "Close", day];
+
+      // Find existing game
+      let game = await AllGames.findOne({ name: category_name });
+
+      if (!game) {
+        game = new AllGames({
+          name: category_name,
+          owner: "System",
+          resultNo: [],
+          openNo: [],
+          closeNo: [],
+          startTime: "00:00",
+          liveTime: 0,
+          endTime: "01:00",
+          Notification_Message: [],
+          nameColor: "#000000",
+          resultColor: "#000000",
+          panelColor: "#66ff00",
+          notificationColor: "#ff0000",
+          status: "Active",
+          fontSize: "18",
+        });
+        newGames++;
+      } else {
+        updatedGames++;
+      }
+
+      // Append new data
+      game.openNo.push(openEntry);
+      game.closeNo.push(closeEntry);
+
+      await game.save();
+      console.log(newGames,updatedGames, "games update and added successfully");
+      
+    }
+
+    res.json({
+      success: true,
+      message: "✅ Game data updated successfully from frontend JSON",
+      stats: { updatedGames, newGames },
+    });
+  } catch (err) {
+    console.error("❌ Error updating games:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update games",
+      error: err.message,
+    });
+  }
+});
 
 router.put("/updatePayment/:userId", async (req, res) => {
   try {
@@ -13,7 +99,9 @@ router.put("/updatePayment/:userId", async (req, res) => {
     const { gameId, method, amount, date } = req.body;
 
     if (!gameId) {
-      return res.status(400).json({ success: false, message: "Game ID required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Game ID required" });
     }
 
     // 🔹 Example: Update payment info inside Game collection
@@ -30,7 +118,9 @@ router.put("/updatePayment/:userId", async (req, res) => {
     );
 
     if (!game) {
-      return res.status(404).json({ success: false, message: "Game not found for user" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found for user" });
     }
 
     res.json({ success: true, message: "Payment updated", game });
@@ -63,12 +153,14 @@ router.get("/", async (req, res) => {
 // ---------------- SET LIVE TIME ----------------
 router.put("/setLiveTime/:id", async (req, res) => {
   console.log("calls");
-  
+
   try {
     const { liveTime } = req.body;
 
     if (liveTime === undefined || liveTime === null) {
-      return res.status(400).json({ success: false, message: "Live time is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Live time is required" });
     }
 
     // Save liveTime as a number directly
@@ -79,7 +171,9 @@ router.put("/setLiveTime/:id", async (req, res) => {
     );
 
     if (!updatedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     res.json({
@@ -97,14 +191,15 @@ router.put("/setLiveTime/:id", async (req, res) => {
   }
 });
 
-
 router.put("/updateNotification/:id", async (req, res) => {
   try {
     const { notificationMessage } = req.body;
     // console.log(notificationMessage);
-    
+
     if (!notificationMessage) {
-      return res.status(400).json({ success: false, message: "Live time is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Live time is required" });
     }
 
     const updatedGame = await AllGames.findByIdAndUpdate(
@@ -113,10 +208,11 @@ router.put("/updateNotification/:id", async (req, res) => {
       { new: true }
     );
     // console.log(updatedGame);
-    
 
     if (!updatedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     res.json({
@@ -133,9 +229,6 @@ router.put("/updateNotification/:id", async (req, res) => {
     });
   }
 });
-
-
-
 
 // ---------------- LATEST UPDATES ----------------
 router.get("/latest-updates", async (req, res) => {
@@ -168,10 +261,13 @@ router.get("/latest-updates", async (req, res) => {
 
       const [startH, startM] = game.startTime.split(":").map(Number);
       const startInMinutes = startH * 60 + startM;
-      const liveTiem = game.liveTime ? game.liveTime : 10
+      const liveTiem = game.liveTime ? game.liveTime : 10;
 
       // Show games whose startTime is within the calculated window
-      return startInMinutes+liveTiem >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+      return (
+        startInMinutes + liveTiem >= nowInMinutes &&
+        startInMinutes <= windowEndInMinutes
+      );
     });
 
     const end_records = allGames.filter((game) => {
@@ -183,13 +279,16 @@ router.get("/latest-updates", async (req, res) => {
 
       const [startH, startM] = game.endTime.split(":").map(Number);
       const startInMinutes = startH * 60 + startM;
-      const liveTiem = game.liveTime ? game.liveTime : 10
+      const liveTiem = game.liveTime ? game.liveTime : 10;
 
       // Show games whose startTime is within the calculated window
-      return startInMinutes+liveTiem >= nowInMinutes && startInMinutes <= windowEndInMinutes;
+      return (
+        startInMinutes + liveTiem >= nowInMinutes &&
+        startInMinutes <= windowEndInMinutes
+      );
     });
 
-    const combinedData = records.concat(end_records)
+    const combinedData = records.concat(end_records);
 
     // Sort by startTime ascending (soonest first)
     const sortedRecords = combinedData.sort((a, b) => {
@@ -236,15 +335,13 @@ router.get("/latest-updates", async (req, res) => {
 //         endInMinutes = endH * 60 + endM;
 //       }
 
-        
-      
 //       // ⏳ liveTime in minutes (default 15)
 //       const liveTime = Number(game.liveTime) || 15;
-      
+
 //       // 🧩 1️⃣ Start-based window
 //       const startShowStart = startInMinutes - 15;
 //       const startShowEnd = startInMinutes + liveTime;
-      
+
 //       console.log(endInMinutes,nowInMinutes,startShowStart,startShowEnd);
 //       // 🧩 2️⃣ End-based window (only if endTime exists)
 //       let endShowStart = null;
@@ -284,7 +381,7 @@ router.get("/latest-updates", async (req, res) => {
 //     console.log({message: sortedRecords.length ? "There is data" : "Data is not present",
 //       hasData: sortedRecords.length > 0,
 //       data: sortedRecords,});
-    
+
 //     // 📦 Respond with data
 //     res.status(200).json({
 //       message: sortedRecords.length ? "There is data" : "Data is not present",
@@ -299,7 +396,7 @@ router.get("/latest-updates", async (req, res) => {
 
 // router.get("/latest-updates", async (req, res) => {
 //   console.log("called");
-  
+
 //   try {
 //     const now = new Date();
 
@@ -340,13 +437,13 @@ router.get("/latest-updates", async (req, res) => {
 
 //       console.log(nowInMinutes , startInMinutes, nowInMinutes , startInMinutes,  liveDuration);
 //       console.log(nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration);
-      
+
 //       // Game is live if current time is within [startTime, startTime + liveTime]
 //       return nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration;
 //     });
 
 //     console.log(live);
-    
+
 //     // Sort both arrays by startTime
 //     const sortByTime = (a, b) => {
 //       const [aH, aM] = a.startTime.split(":").map(Number);
@@ -367,14 +464,14 @@ router.get("/latest-updates", async (req, res) => {
 //   }
 // });
 
-
-
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
   try {
     const game = await AllGames.findById(req.params.id);
     if (!game) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
     res.json({ success: true, data: game });
   } catch (err) {
@@ -383,15 +480,14 @@ router.get("/:id", async (req, res) => {
 });
 
 router.post("/api/getGameFormLink", async (req, res) => {
-  const { url, userName,admin } = req.body;
+  const { url, userName, admin } = req.body;
   // console.log("called");
   try {
     const response = await fetch(url);
     // console.log(response);
-    
+
     const gamesFromApi = await response.json();
     // console.log(gamesFromApi.data);
-    
 
     if (!Array.isArray(gamesFromApi.data)) {
       return res.status(400).json({ error: "Invalid API response format" });
@@ -403,16 +499,15 @@ router.post("/api/getGameFormLink", async (req, res) => {
     const results = [];
 
     for (const game of gamesFromApi.data) {
-      
       const dbGame = await AllGames.findOne({ name: game.category_name });
       if (!dbGame) continue;
       // console.log(role);
-      
+
       // ✅ Ownership check
       if (admin !== "Admin" && dbGame.owner !== userName) {
-        results.push({ 
-          game: game.category_name, 
-          status: "skipped - not owner" 
+        results.push({
+          game: game.category_name,
+          status: "skipped - not owner",
         });
         continue;
       }
@@ -472,7 +567,9 @@ router.put("/saveFontSize/:id", async (req, res) => {
   try {
     const { fontSize } = req.body;
     if (!fontSize) {
-      return res.status(400).json({ success: false, message: "Font size is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Font size is required" });
     }
 
     const updatedGame = await AllGames.findByIdAndUpdate(
@@ -482,7 +579,9 @@ router.put("/saveFontSize/:id", async (req, res) => {
     );
 
     if (!updatedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     res.json({ success: true, data: updatedGame });
@@ -522,7 +621,6 @@ router.post("/addGame", async (req, res) => {
   }
 });
 
-
 // ---------------- DELETE GAME ----------------
 router.delete("/deleteGame/:name", async (req, res) => {
   try {
@@ -530,7 +628,9 @@ router.delete("/deleteGame/:name", async (req, res) => {
     const deletedGame = await AllGames.findOneAndDelete({ name: gameName });
 
     if (!deletedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     res.json({
@@ -555,7 +655,10 @@ router.put("/updateColor/:id", async (req, res) => {
   try {
     // Find game by ID
     const game = await AllGames.findById(gameId);
-    if (!game) return res.status(404).json({ success: false, message: "Game not found" });
+    if (!game)
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
 
     // Update color fields if provided
     if (nameColor) game.nameColor = nameColor;
@@ -565,7 +668,11 @@ router.put("/updateColor/:id", async (req, res) => {
 
     await game.save();
 
-    res.json({ success: true, message: "Colors updated successfully", data: game });
+    res.json({
+      success: true,
+      message: "Colors updated successfully",
+      data: game,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -575,7 +682,7 @@ router.put("/updateColor/:id", async (req, res) => {
 // ---------------- MANUAL UPDATE ----------------
 router.put("/updateGame/:id", async (req, res) => {
   // console.log(req.body);
-  
+
   try {
     const { resultNo } = req.body;
 
@@ -599,10 +706,16 @@ router.put("/updateGame/:id", async (req, res) => {
       });
     }
 
-    const updatedGame = await AllGames.findByIdAndUpdate(req.params.id, updateField, { new: true });
+    const updatedGame = await AllGames.findByIdAndUpdate(
+      req.params.id,
+      updateField,
+      { new: true }
+    );
 
     if (!updatedGame) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     res.json({
@@ -658,6 +771,5 @@ router.put("/updateStatus/:id", async (req, res) => {
     });
   }
 });
-
 
 export default router;
