@@ -109,6 +109,47 @@ router.post("/authorize", async (req, res) => {
   }
 });
 
+// Update user password
+router.put("/updatePassword/:id", async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ success: false, message: "Password required" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { password: hashed },
+      { new: true }
+    );
+
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// Get all users including hashed password
+router.get("/allWithPassword", async (req, res) => {
+  try {
+    const users = await User.find().select("+password");
+
+    res.status(200).json({
+      success: true,
+      message: "All users including password fetched successfully",
+      data: users,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 // Get all users
 router.get("/", async (_req, res) => {
