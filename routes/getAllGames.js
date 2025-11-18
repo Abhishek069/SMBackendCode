@@ -538,6 +538,69 @@ router.post("/api/getGameFormLink", async (req, res) => {
   }
 });
 
+router.put("/updateFull/:id", async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const {
+      name,
+      owner,
+      startTime,
+      endTime,
+      resultNo,
+      nameColor,
+      resultColor,
+      panelColor,
+      notificationColor,
+      status,
+      liveTime,
+      fontSize,
+    } = req.body;
+
+    // Find game
+    const game = await AllGames.findById(gameId);
+    if (!game) {
+      return res.status(404).json({
+        success: false,
+        message: "Game not found",
+      });
+    }
+
+    // Update ONLY fields that came from frontend
+    if (name) game.name = name;
+    if (owner) game.owner = owner;
+    if (startTime) game.startTime = startTime;
+    if (endTime) game.endTime = endTime;
+    if (nameColor) game.nameColor = nameColor;
+    if (resultColor) game.resultColor = resultColor;
+    if (panelColor) game.panelColor = panelColor;
+    if (notificationColor) game.notificationColor = notificationColor;
+    if (status) game.status = status;
+    if (liveTime !== undefined) game.liveTime = Number(liveTime);
+    if (fontSize !== undefined) game.fontSize = Number(fontSize);
+
+    // OPTIONAL — update resultNo if provided
+    if (resultNo) {
+      game.resultNo = resultNo;
+    }
+
+    await game.save();
+
+    res.json({
+      success: true,
+      message: "Game updated successfully!",
+      data: game,
+    });
+  } catch (err) {
+    console.error("Error updating game:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating game",
+      error: err.message,
+    });
+  }
+});
+
+
 // ---------------- VALIDATOR ----------------
 function isValidResult(resultArray) {
   const mainNumber = resultArray[0];
