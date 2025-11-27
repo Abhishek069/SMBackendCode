@@ -743,9 +743,143 @@ router.put("/updateColor/:id", async (req, res) => {
 });
 
 // ---------------- MANUAL UPDATE ----------------
-router.put("/updateGame/:id", async (req, res) => {
-  // console.log(req.body);
+// router.put("/updateGame/:id", async (req, res) => {
+//   // console.log(req.body);
+//   console.log("called");
+  
+//   try {
+//     const { resultNo } = req.body;
 
+//     if (!Array.isArray(resultNo) || resultNo.length < 4) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid result format",
+//       });
+//     }
+
+//     let updateField = {};
+
+//     if (resultNo[3] === "Open") {
+//       updateField = { $push: { openNo: resultNo } };
+//     } else if (resultNo[3] === "Close") {
+//       updateField = { $push: { closeNo: resultNo } };
+//     } else {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid OpenOrClose value. Use 'Open' or 'Close'.",
+//       });
+//     }
+
+//     const updatedGame = await AllGames.findByIdAndUpdate(
+//       req.params.id,
+//       updateField,
+//       { new: true }
+//     );
+
+//     if (!updatedGame) {
+//       return res
+//         .status(404)
+//         .json({ success: false, message: "Game not found" });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: `Game updated successfully with ${resultNo[3]} result`,
+//       data: updatedGame,
+//     });
+//   } catch (err) {
+//     console.error("Error updating game:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update game",
+//       error: err.message,
+//     });
+//   }
+// });
+
+// ---------------- MANUAL UPDATE (replace existing handler) ----------------
+// router.put("/updateGame/:id", async (req, res) => {
+//   try {
+//     const { resultNo } = req.body;
+
+//     if (!Array.isArray(resultNo) || resultNo.length < 4) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid result format",
+//       });
+//     }
+
+//     // expected structure:
+//     // [ mainNumber, checkDigit, dateISOString, "Open"|"Close", dayName ]
+//     const type = resultNo[3];
+//     const dateIso = resultNo[2];
+//     if (!dateIso) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Date is required in resultNo[2]",
+//       });
+//     }
+
+//     // normalize date key (YYYY-MM-DD)
+//     const dateKey = new Date(dateIso).toISOString().split("T")[0];
+
+//     // Find game
+//     const game = await AllGames.findById(req.params.id);
+//     if (!game) {
+//       return res.status(404).json({ success: false, message: "Game not found" });
+//     }
+
+//     // choose the array to modify
+//     let targetArrayName;
+//     if (type === "Open") targetArrayName = "openNo";
+//     else if (type === "Close") targetArrayName = "closeNo";
+//     else {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid OpenOrClose value. Use 'Open' or 'Close'.",
+//       });
+//     }
+
+//     // make sure arrays exist
+//     if (!Array.isArray(game[targetArrayName])) game[targetArrayName] = [];
+
+//     // find existing index by matching date portion of the stored ISO date (index 2)
+//     const existingIndex = game[targetArrayName].findIndex((entry) => {
+//       try {
+//         return entry && entry[2] && entry[2].toString().split("T")[0] === dateKey;
+//       } catch (err) {
+//         return false;
+//       }
+//     });
+//     console.log(existingIndex);
+    
+
+//     if (existingIndex >= 0) {
+//       // override existing entry
+//       game[targetArrayName][existingIndex] = resultNo;
+//     } else {
+//       // push new entry
+//       game[targetArrayName].push(resultNo);
+//     }
+
+//     await game.save();
+
+//     res.json({
+//       success: true,
+//       message: `Game ${existingIndex >= 0 ? "overwritten" : "updated"} successfully with ${type} result`,
+//       data: game,
+//     });
+//   } catch (err) {
+//     console.error("Error updating game:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update game",
+//       error: err.message,
+//     });
+//   }
+// });
+
+router.put("/updateGame/:id", async (req, res) => {
   try {
     const { resultNo } = req.body;
 
@@ -756,45 +890,46 @@ router.put("/updateGame/:id", async (req, res) => {
       });
     }
 
-    let updateField = {};
+    const type = resultNo[3]; // "Open" or "Close"
+    const isoDate = resultNo[2];
+    const dateKey = new Date(isoDate).toISOString().split("T")[0];
 
-    if (resultNo[3] === "Open") {
-      updateField = { $push: { openNo: resultNo } };
-    } else if (resultNo[3] === "Close") {
-      updateField = { $push: { closeNo: resultNo } };
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OpenOrClose value. Use 'Open' or 'Close'.",
-      });
+    const game = await AllGames.findById(req.params.id);
+    if (!game) {
+      return res.status(404).json({ success: false, message: "Game not found" });
     }
 
-    const updatedGame = await AllGames.findByIdAndUpdate(
-      req.params.id,
-      updateField,
-      { new: true }
-    );
+    let target = type === "Open" ? "openNo" : "closeNo";
 
-    if (!updatedGame) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Game not found" });
-    }
+    if (!Array.isArray(game[target])) game[target] = [];
+
+    // 1️⃣ REMOVE Old Entry
+    game[target] = game[target].filter((entry) => {
+      if (!entry || !entry[2]) return true;
+      return entry[2].split("T")[0] !== dateKey; // keep only entries NOT from same date
+    });
+
+    // 2️⃣ INSERT New Entry
+    game[target].push(resultNo);
+
+    await game.save();
 
     res.json({
       success: true,
-      message: `Game updated successfully with ${resultNo[3]} result`,
-      data: updatedGame,
+      message: "Record replaced successfully",
+      data: game,
     });
   } catch (err) {
-    console.error("Error updating game:", err);
+    console.error("Error updating record:", err);
     res.status(500).json({
       success: false,
-      message: "Failed to update game",
+      message: "Update failed",
       error: err.message,
     });
   }
 });
+
+
 
 router.put("/updateStatus/:id", async (req, res) => {
   try {
