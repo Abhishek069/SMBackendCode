@@ -938,7 +938,7 @@ router.put("/updateGame/:id", async (req, res) => {
     });
 
     // 2️⃣ INSERT New Entry
-    game[target].push(resultNo);
+    game[target].unshift(resultNo);
 
     await game.save();
 
