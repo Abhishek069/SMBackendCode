@@ -9,89 +9,200 @@ import dayjs from "dayjs";
 const router = express.Router();
 
 // ---------------- UPDATE GAME DATA FROM FRONTEND JSON ----------------
-router.post("/updateGamesData", async (req, res) => {
-  console.log("hello I hitted", req);
+// router.post("/updateGamesData", async (req, res) => {
+//   console.log("hello I hitted", req);
   
-  try {
-    const records = req.body; // The frontend will send JSON array here
+//   try {
+//     const records = req.body; // The frontend will send JSON array here
 
+//     if (!Array.isArray(records) || records.length === 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Invalid or empty data received. Expected an array of records.",
+//       });
+//     }
+
+//     const getDayFromDate = (dateStr) => dayjs(dateStr).format("dddd");
+
+//     let updatedGames = 0;
+//     let newGames = 0;
+
+//     for (const record of records) {
+//       const { category_name, date, open_pana, open_close, close_pana } = record;
+
+//       if (!category_name || !open_pana || !close_pana || !open_close || !date)
+//         continue;
+
+//       const openDigit = open_close[0];
+//       const closeDigit = open_close[1];
+//       const day = getDayFromDate(date);
+//       const dateTime = new Date(date).toISOString();
+
+//       // Prepare entries
+//       const openEntry = [open_pana, openDigit, dateTime, "Open", day];
+//       const closeEntry = [close_pana, closeDigit, dateTime, "Close", day];
+
+//       console.log(category_name);
+      
+//       // Find existing game
+//       let game = await AllGames.findOne({ name: category_name });
+//       console.log(game);
+      
+//       if (!game) {
+//         game = new AllGames({
+//           name: category_name,
+//           owner: "System",
+//           resultNo: [],
+//           openNo: [],
+//           closeNo: [],
+//           startTime: "00:00",
+//           liveTime: 0,
+//           endTime: "01:00",
+//           Notification_Message: [],
+//           nameColor: "#000000",
+//           resultColor: "#000000",
+//           panelColor: "#66ff00",
+//           notificationColor: "#ff0000",
+//           status: "Active",
+//           fontSize: "18",
+//         });
+//         newGames++;
+//       } else {
+//         updatedGames++;
+//       }
+
+//       // Append new data
+//       game.openNo.push(openEntry);
+//       game.closeNo.push(closeEntry);
+
+//       await game.save();
+//       console.log(newGames,updatedGames, "games update and added successfully");
+      
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "✅ Game data updated successfully from frontend JSON",
+//       stats: { updatedGames, newGames },
+//     });
+//   } catch (err) {
+//     console.error("❌ Error updating games:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to update games",
+//       error: err.message,
+//     });
+//   }
+// });
+
+router.post("/updateGamesData", async (req, res) => {
+  try {
+    const records = req.body;
     if (!Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid or empty data received. Expected an array of records.",
-      });
+      return res.status(400).json({ success: false, message: "Expected non-empty array" });
     }
 
     const getDayFromDate = (dateStr) => dayjs(dateStr).format("dddd");
 
-    let updatedGames = 0;
-    let newGames = 0;
+    // 1) Normalize and group records by category_name
+    const groups = new Map(); // name -> { openEntries: [], closeEntries: [] }
 
-    for (const record of records) {
-      const { category_name, date, open_pana, open_close, close_pana } = record;
+    for (const rec of records) {
+      console.log("runing");
+      
+      let { category_name, date, open_pana, open_close, close_pana } = rec;
 
-      if (!category_name || !open_pana || !close_pana || !open_close || !date)
-        continue;
+      if (!category_name || !open_pana || !close_pana || !open_close || !date) continue;
 
-      const openDigit = open_close[0];
-      const closeDigit = open_close[1];
-      const day = getDayFromDate(date);
+      // Normalize name
+      const name = String(category_name).trim();
+
+      // defensive: ensure open_close is string/array
+      const openCloseStr = String(open_close);
+      const openDigit = openCloseStr[0] ?? null;
+      const closeDigit = openCloseStr[1] ?? null;
+
       const dateTime = new Date(date).toISOString();
+      const day = getDayFromDate(date);
 
-      // Prepare entries
       const openEntry = [open_pana, openDigit, dateTime, "Open", day];
       const closeEntry = [close_pana, closeDigit, dateTime, "Close", day];
 
-      // Find existing game
-      let game = await AllGames.findOne({ name: category_name });
-
-      if (!game) {
-        game = new AllGames({
-          name: category_name,
-          owner: "System",
-          resultNo: [],
-          openNo: [],
-          closeNo: [],
-          startTime: "00:00",
-          liveTime: 0,
-          endTime: "01:00",
-          Notification_Message: [],
-          nameColor: "#000000",
-          resultColor: "#000000",
-          panelColor: "#66ff00",
-          notificationColor: "#ff0000",
-          status: "Active",
-          fontSize: "18",
-        });
-        newGames++;
-      } else {
-        updatedGames++;
+      if (!groups.has(name)) {
+        groups.set(name, { openEntries: [], closeEntries: [] });
       }
+      const g = groups.get(name);
+      g.openEntries.push(openEntry);
+      g.closeEntries.push(closeEntry);
+    }
 
-      // Append new data
-      game.openNo.push(openEntry);
-      game.closeNo.push(closeEntry);
+    if (groups.size === 0) {
+      return res.json({ success: true, message: "No valid records to process", stats: { updatedGames: 0, newGames: 0 } });
+    }
 
-      await game.save();
-      console.log(newGames,updatedGames, "games update and added successfully");
-      
+    // 2) Build bulk operations (upserts)
+    const bulkOps = [];
+    for (const [name, { openEntries, closeEntries }] of groups.entries()) {
+      // Use $setOnInsert to initialize defaults when creating a new game
+      const op = {
+        updateOne: {
+          filter: { name },
+          update: {
+            $push: {
+              openNo: { $each: openEntries },
+              closeNo: { $each: closeEntries },
+            },
+            $setOnInsert: {
+              owner: "System",
+              resultNo: [],
+              startTime: "00:00",
+              liveTime: 0,
+              endTime: "01:00",
+              Notification_Message: [],
+              nameColor: "#000000",
+              resultColor: "#000000",
+              panelColor: "#66ff00",
+              notificationColor: "#ff0000",
+              status: "Active",
+              fontSize: "18",
+            },
+          },
+          upsert: true,
+        },
+      };
+      bulkOps.push(op);
+    }
+
+    // 3) Execute bulkWrite in manageable chunks (avoid too-large single bulk)
+    const CHUNK_SIZE = 500;
+    let updatedGames = 0;
+    let newGames = 0;
+    const opsChunks = [];
+    for (let i = 0; i < bulkOps.length; i += CHUNK_SIZE) {
+      opsChunks.push(bulkOps.slice(i, i + CHUNK_SIZE));
+    }
+
+    for (const chunk of opsChunks) {
+      const resBulk = await AllGames.bulkWrite(chunk, { ordered: false });
+      // bulkWrite response gives counts:
+      // - upsertedCount => number of new documents created
+      // - modifiedCount => number of modified documents
+      newGames += resBulk.upsertedCount || 0;
+      updatedGames += (resBulk.modifiedCount || 0);
     }
 
     res.json({
       success: true,
-      message: "✅ Game data updated successfully from frontend JSON",
-      stats: { updatedGames, newGames },
+      message: "Game data updated successfully (batched).",
+      stats: { updatedGames, newGames, processedGameNames: groups.size },
     });
   } catch (err) {
-    console.error("❌ Error updating games:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update games",
-      error: err.message,
-    });
+    console.error("Error in updateGamesData:", err);
+    res.status(500).json({ success: false, message: "Failed to update games", error: err.message });
   }
 });
+
 
 router.put("/updatePayment/:userId", async (req, res) => {
   try {
