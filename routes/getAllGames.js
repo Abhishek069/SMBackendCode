@@ -244,11 +244,29 @@ router.put("/updatePayment/:userId", async (req, res) => {
 // ---------------- GET ALL ----------------
 router.get("/", async (req, res) => {
   try {
-    const users = await AllGames.find();
+    // Only fetch metadata + last 5 results for fast load
+    const games = await AllGames.find({}, {
+      name: 1,
+      owner: 1,
+      startTime: 1,
+      endTime: 1,
+      status: 1,
+      liveTime: 1,
+      nameColor: 1,
+      resultColor: 1,
+      panelColor: 1,
+      notificationColor: 1,
+      fontSize: 1,
+      // only send last few entries instead of all of them
+      openNo: { $slice: -5 },
+      closeNo: { $slice: -5 },
+      resultNo: { $slice: -5 }
+    });
+
     res.status(200).json({
       success: true,
       message: "Fetched all game data successfully",
-      data: users,
+      data: games,
     });
   } catch (error) {
     res.status(500).json({
@@ -258,6 +276,7 @@ router.get("/", async (req, res) => {
     });
   }
 });
+
 
 // ---------------- LATEST UPDATES ----------------
 // ---------------- SET LIVE TIME ----------------
@@ -342,179 +361,15 @@ router.put("/updateNotification/:id", async (req, res) => {
 });
 
 // ---------------- LATEST UPDATES ----------------
-router.get("/latest-updates", async (req, res) => {
-  try {
-    const now = new Date();
-
-    // Convert current UTC time to IST
-    let hours = now.getUTCHours() + 5;
-    let minutes = now.getUTCMinutes() + 30;
-
-    // Handle overflow
-    if (minutes >= 60) {
-      minutes -= 60;
-      hours += 1;
-    }
-    if (hours >= 24) {
-      hours -= 24;
-    }
-
-    const nowInMinutes = hours * 60 + minutes;
-
-    const allGames = await AllGames.find({});
-
-    const records = allGames.filter((game) => {
-      if (!game.startTime) return false;
-
-      // Determine the window in minutes
-      const windowMinutes = 15;
-      const windowEndInMinutes = nowInMinutes + windowMinutes;
-
-      const [startH, startM] = game.startTime.split(":").map(Number);
-      const startInMinutes = startH * 60 + startM;
-      const liveTiem = game.liveTime ? game.liveTime : 10;
-
-      // Show games whose startTime is within the calculated window
-      return (
-        startInMinutes + liveTiem >= nowInMinutes &&
-        startInMinutes <= windowEndInMinutes
-      );
-    });
-
-    const end_records = allGames.filter((game) => {
-      if (!game.endTime) return false;
-
-      // Determine the window in minutes
-      const windowMinutes = 15;
-      const windowEndInMinutes = nowInMinutes + windowMinutes;
-
-      const [startH, startM] = game.endTime.split(":").map(Number);
-      const startInMinutes = startH * 60 + startM;
-      const liveTiem = game.liveTime ? game.liveTime : 10;
-
-      // Show games whose startTime is within the calculated window
-      return (
-        startInMinutes + liveTiem >= nowInMinutes &&
-        startInMinutes <= windowEndInMinutes
-      );
-    });
-
-    const combinedData = records.concat(end_records);
-
-    // Sort by startTime ascending (soonest first)
-    const sortedRecords = combinedData.sort((a, b) => {
-      const [aH, aM] = a.startTime.split(":").map(Number);
-      const [bH, bM] = b.startTime.split(":").map(Number);
-      return aH * 60 + aM - (bH * 60 + bM);
-    });
-
-    const isDataPresent = sortedRecords.length > 0;
-
-    // ✅ Always send "data" as an array
-    res.status(200).json({
-      message: isDataPresent ? "There is data" : "Data is not present",
-      hasData: isDataPresent,
-      data: sortedRecords, // will be [] if no records
-    });
-  } catch (error) {
-    console.error("Error fetching records:", error);
-    res.status(500).json({ error: "Failed to fetch records" });
-  }
-});
-
 // router.get("/latest-updates", async (req, res) => {
-//   try {
-//     // 🕒 Get current IST time
-//     const nowUTC = new Date();
-//     const nowIST = new Date(nowUTC.getTime() + 5.5 * 60 * 60 * 1000); // UTC → IST
-//     const nowInMinutes = nowIST.getHours() * 60 + nowIST.getMinutes();
-
-//     // 🎮 Fetch all games
-//     const allGames = await AllGames.find({});
-
-//     const records = allGames.filter((game) => {
-//       if (!game.startTime) return false;
-
-//       // ⏰ Convert startTime to total minutes
-//       const [startH, startM] = game.startTime.split(":").map(Number);
-//       const startInMinutes = startH * 60 + startM;
-
-//       // 🕓 Convert endTime (if present)
-//       let endInMinutes = null;
-//       if (game.endTime) {
-//         const [endH, endM] = game.endTime.split(":").map(Number);
-//         endInMinutes = endH * 60 + endM;
-//       }
-
-//       // ⏳ liveTime in minutes (default 15)
-//       const liveTime = Number(game.liveTime) || 15;
-
-//       // 🧩 1️⃣ Start-based window
-//       const startShowStart = startInMinutes - 15;
-//       const startShowEnd = startInMinutes + liveTime;
-
-//       console.log(endInMinutes,nowInMinutes,startShowStart,startShowEnd);
-//       // 🧩 2️⃣ End-based window (only if endTime exists)
-//       let endShowStart = null;
-//       let endShowEnd = null;
-//       if (endInMinutes !== null) {
-//         endShowStart = endInMinutes - 15;
-//         endShowEnd = endInMinutes + liveTime;
-//       }
-
-//       // 🕕 Handle midnight wrap (if window crosses 00:00)
-//       const adjustForMidnight = (time) => (time < 0 ? time + 1440 : time % 1440);
-//       const nowAdj = nowInMinutes;
-//       const sStart = adjustForMidnight(startShowStart);
-//       const sEnd = adjustForMidnight(startShowEnd);
-//       const eStart = endShowStart !== null ? adjustForMidnight(endShowStart) : null;
-//       const eEnd = endShowEnd !== null ? adjustForMidnight(endShowEnd) : null;
-
-//       // ✅ Check if now is within either window
-//       const inStartWindow =
-//         (sStart <= sEnd && nowAdj >= sStart && nowAdj <= sEnd) ||
-//         (sStart > sEnd && (nowAdj >= sStart || nowAdj <= sEnd)); // for midnight wrap
-
-//       const inEndWindow =
-//         eStart !== null &&
-//         ((eStart <= eEnd && nowAdj >= eStart && nowAdj <= eEnd) ||
-//           (eStart > eEnd && (nowAdj >= eStart || nowAdj <= eEnd)));
-
-//       return inStartWindow || inEndWindow;
-//     });
-
-//     // 🔢 Sort by startTime ascending
-//     const sortedRecords = records.sort((a, b) => {
-//       const [aH, aM] = a.startTime.split(":").map(Number);
-//       const [bH, bM] = b.startTime.split(":").map(Number);
-//       return aH * 60 + aM - (bH * 60 + bM);
-//     });
-//     console.log({message: sortedRecords.length ? "There is data" : "Data is not present",
-//       hasData: sortedRecords.length > 0,
-//       data: sortedRecords,});
-
-//     // 📦 Respond with data
-//     res.status(200).json({
-//       message: sortedRecords.length ? "There is data" : "Data is not present",
-//       hasData: sortedRecords.length > 0,
-//       data: sortedRecords,
-//     });
-//   } catch (error) {
-//     console.error("Error fetching records:", error);
-//     res.status(500).json({ error: "Failed to fetch records" });
-//   }
-// });
-
-// router.get("/latest-updates", async (req, res) => {
-//   console.log("called");
-
 //   try {
 //     const now = new Date();
 
-//     // Convert UTC to IST
+//     // Convert current UTC time to IST
 //     let hours = now.getUTCHours() + 5;
 //     let minutes = now.getUTCMinutes() + 30;
 
+//     // Handle overflow
 //     if (minutes >= 60) {
 //       minutes -= 60;
 //       hours += 1;
@@ -527,53 +382,115 @@ router.get("/latest-updates", async (req, res) => {
 
 //     const allGames = await AllGames.find({});
 
-//     // --- Upcoming games (within next 15 minutes) ---
-//     const upcoming = allGames.filter((game) => {
+//     const records = allGames.filter((game) => {
 //       if (!game.startTime) return false;
 
-//       const [startH, startM] = game.startTime.split(":").map(Number);
-//       const startInMinutes = startH * 60 + startM;
-
-//       // Show only games starting within the next 15 min
-//       return startInMinutes > nowInMinutes && startInMinutes <= nowInMinutes + 15;
-//     });
-
-//     // --- Live games (startTime <= now < startTime + liveTime) ---
-//     const live = allGames.filter((game) => {
-//       if (!game.startTime || !game.liveTime) return false;
+//       // Determine the window in minutes
+//       const windowMinutes = 15;
+//       const windowEndInMinutes = nowInMinutes + windowMinutes;
 
 //       const [startH, startM] = game.startTime.split(":").map(Number);
 //       const startInMinutes = startH * 60 + startM;
-//       const liveDuration = Number(game.liveTime);
+//       const liveTiem = game.liveTime ? game.liveTime : 10;
 
-//       console.log(nowInMinutes , startInMinutes, nowInMinutes , startInMinutes,  liveDuration);
-//       console.log(nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration);
-
-//       // Game is live if current time is within [startTime, startTime + liveTime]
-//       return nowInMinutes >= startInMinutes && nowInMinutes <= startInMinutes + liveDuration;
+//       // Show games whose startTime is within the calculated window
+//       return (
+//         startInMinutes + liveTiem >= nowInMinutes &&
+//         startInMinutes <= windowEndInMinutes
+//       );
 //     });
 
-//     console.log(live);
+//     const end_records = allGames.filter((game) => {
+//       if (!game.endTime) return false;
 
-//     // Sort both arrays by startTime
-//     const sortByTime = (a, b) => {
+//       // Determine the window in minutes
+//       const windowMinutes = 15;
+//       const windowEndInMinutes = nowInMinutes + windowMinutes;
+
+//       const [startH, startM] = game.endTime.split(":").map(Number);
+//       const startInMinutes = startH * 60 + startM;
+//       const liveTiem = game.liveTime ? game.liveTime : 10;
+
+//       // Show games whose startTime is within the calculated window
+//       return (
+//         startInMinutes + liveTiem >= nowInMinutes &&
+//         startInMinutes <= windowEndInMinutes
+//       );
+//     });
+
+//     const combinedData = records.concat(end_records);
+
+//     // Sort by startTime ascending (soonest first)
+//     const sortedRecords = combinedData.sort((a, b) => {
 //       const [aH, aM] = a.startTime.split(":").map(Number);
 //       const [bH, bM] = b.startTime.split(":").map(Number);
 //       return aH * 60 + aM - (bH * 60 + bM);
-//     };
+//     });
 
-//     const sortedUpcoming = upcoming.sort(sortByTime);
-//     const sortedLive = live.sort(sortByTime);
+//     const isDataPresent = sortedRecords.length > 0;
 
+//     // ✅ Always send "data" as an array
 //     res.status(200).json({
-//       upcoming: sortedUpcoming,
-//       live: sortedLive,
+//       message: isDataPresent ? "There is data" : "Data is not present",
+//       hasData: isDataPresent,
+//       data: sortedRecords, // will be [] if no records
 //     });
 //   } catch (error) {
 //     console.error("Error fetching records:", error);
 //     res.status(500).json({ error: "Failed to fetch records" });
 //   }
 // });
+
+router.get("/latest-updates", async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Convert server time to minutes since midnight (IST)
+    const istHour = now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60);
+    const istMinute = (now.getUTCMinutes() + 30) % 60;
+    const nowMinutes = istHour * 60 + istMinute;
+
+    const windowMinutes = 15;
+
+    // Query Mongo directly
+    const recordList = await AllGames.find({
+      $expr: {
+        $and: [
+          { $gte: [
+              { $add: [
+                  { $multiply: [
+                      { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, 60
+                  ] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1] } }
+              ] },
+              nowMinutes - 15
+            ]
+          },
+          { $lte: [
+              { $add: [
+                  { $multiply: [
+                      { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, 60
+                  ] },
+                  { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1] } }
+              ] },
+              nowMinutes + 15
+            ]
+          }
+        ]
+      }
+    }).sort({ startTime: 1 });
+
+    res.status(200).json({
+      success: true,
+      hasData: recordList.length > 0,
+      data: recordList,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch latest updates" });
+  }
+});
+
 
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
