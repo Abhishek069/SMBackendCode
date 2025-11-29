@@ -11,7 +11,7 @@ const router = express.Router();
 // ---------------- UPDATE GAME DATA FROM FRONTEND JSON ----------------
 // router.post("/updateGamesData", async (req, res) => {
 //   console.log("hello I hitted", req);
-  
+
 //   try {
 //     const records = req.body; // The frontend will send JSON array here
 
@@ -44,11 +44,11 @@ const router = express.Router();
 //       const closeEntry = [close_pana, closeDigit, dateTime, "Close", day];
 
 //       console.log(category_name);
-      
+
 //       // Find existing game
 //       let game = await AllGames.findOne({ name: category_name });
 //       console.log(game);
-      
+
 //       if (!game) {
 //         game = new AllGames({
 //           name: category_name,
@@ -78,7 +78,7 @@ const router = express.Router();
 
 //       await game.save();
 //       console.log(newGames,updatedGames, "games update and added successfully");
-      
+
 //     }
 
 //     res.json({
@@ -100,7 +100,9 @@ router.post("/updateGamesData", async (req, res) => {
   try {
     const records = req.body;
     if (!Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({ success: false, message: "Expected non-empty array" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Expected non-empty array" });
     }
 
     const getDayFromDate = (dateStr) => dayjs(dateStr).format("dddd");
@@ -110,10 +112,11 @@ router.post("/updateGamesData", async (req, res) => {
 
     for (const rec of records) {
       console.log("runing");
-      
+
       let { category_name, date, open_pana, open_close, close_pana } = rec;
 
-      if (!category_name || !open_pana || !close_pana || !open_close || !date) continue;
+      if (!category_name || !open_pana || !close_pana || !open_close || !date)
+        continue;
 
       // Normalize name
       const name = String(category_name).trim();
@@ -138,7 +141,11 @@ router.post("/updateGamesData", async (req, res) => {
     }
 
     if (groups.size === 0) {
-      return res.json({ success: true, message: "No valid records to process", stats: { updatedGames: 0, newGames: 0 } });
+      return res.json({
+        success: true,
+        message: "No valid records to process",
+        stats: { updatedGames: 0, newGames: 0 },
+      });
     }
 
     // 2) Build bulk operations (upserts)
@@ -189,7 +196,7 @@ router.post("/updateGamesData", async (req, res) => {
       // - upsertedCount => number of new documents created
       // - modifiedCount => number of modified documents
       newGames += resBulk.upsertedCount || 0;
-      updatedGames += (resBulk.modifiedCount || 0);
+      updatedGames += resBulk.modifiedCount || 0;
     }
 
     res.json({
@@ -199,10 +206,13 @@ router.post("/updateGamesData", async (req, res) => {
     });
   } catch (err) {
     console.error("Error in updateGamesData:", err);
-    res.status(500).json({ success: false, message: "Failed to update games", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to update games",
+      error: err.message,
+    });
   }
 });
-
 
 router.put("/updatePayment/:userId", async (req, res) => {
   try {
@@ -245,23 +255,26 @@ router.put("/updatePayment/:userId", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     // Only fetch metadata + last 5 results for fast load
-    const games = await AllGames.find({}, {
-      name: 1,
-      owner: 1,
-      startTime: 1,
-      endTime: 1,
-      status: 1,
-      liveTime: 1,
-      nameColor: 1,
-      resultColor: 1,
-      panelColor: 1,
-      notificationColor: 1,
-      fontSize: 1,
-      // only send last few entries instead of all of them
-      openNo: { $slice: -5 },
-      closeNo: { $slice: -5 },
-      resultNo: { $slice: -5 }
-    });
+    const games = await AllGames.find(
+      {},
+      {
+        name: 1,
+        owner: 1,
+        startTime: 1,
+        endTime: 1,
+        status: 1,
+        liveTime: 1,
+        nameColor: 1,
+        resultColor: 1,
+        panelColor: 1,
+        notificationColor: 1,
+        fontSize: 1,
+        // only send last few entries instead of all of them
+        openNo: { $slice: -5 },
+        closeNo: { $slice: -5 },
+        resultNo: { $slice: -5 },
+      }
+    );
 
     res.status(200).json({
       success: true,
@@ -276,7 +289,6 @@ router.get("/", async (req, res) => {
     });
   }
 });
-
 
 // ---------------- LATEST UPDATES ----------------
 // ---------------- SET LIVE TIME ----------------
@@ -446,7 +458,8 @@ router.get("/latest-updates", async (req, res) => {
     const now = new Date();
 
     // Convert server time to minutes since midnight (IST)
-    const istHour = now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60);
+    const istHour =
+      now.getUTCHours() + 5 + Math.floor((now.getUTCMinutes() + 30) / 60);
     const istMinute = (now.getUTCMinutes() + 30) % 60;
     const nowMinutes = istHour * 60 + istMinute;
 
@@ -456,28 +469,56 @@ router.get("/latest-updates", async (req, res) => {
     const recordList = await AllGames.find({
       $expr: {
         $and: [
-          { $gte: [
-              { $add: [
-                  { $multiply: [
-                      { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, 60
-                  ] },
-                  { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1] } }
-              ] },
-              nowMinutes - 15
-            ]
+          {
+            $gte: [
+              {
+                $add: [
+                  {
+                    $multiply: [
+                      {
+                        $toInt: {
+                          $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+                        },
+                      },
+                      60,
+                    ],
+                  },
+                  {
+                    $toInt: {
+                      $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+                    },
+                  },
+                ],
+              },
+              nowMinutes - 15,
+            ],
           },
-          { $lte: [
-              { $add: [
-                  { $multiply: [
-                      { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0] } }, 60
-                  ] },
-                  { $toInt: { $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1] } }
-              ] },
-              nowMinutes + 15
-            ]
-          }
-        ]
-      }
+          {
+            $lte: [
+              {
+                $add: [
+                  {
+                    $multiply: [
+                      {
+                        $toInt: {
+                          $arrayElemAt: [{ $split: ["$startTime", ":"] }, 0],
+                        },
+                      },
+                      60,
+                    ],
+                  },
+                  {
+                    $toInt: {
+                      $arrayElemAt: [{ $split: ["$startTime", ":"] }, 1],
+                    },
+                  },
+                ],
+              },
+              nowMinutes + 15,
+            ],
+          },
+        ],
+      },
     }).sort({ startTime: 1 });
 
     res.status(200).json({
@@ -490,7 +531,6 @@ router.get("/latest-updates", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch latest updates" });
   }
 });
-
 
 // ---------------- GET BY ID ----------------
 router.get("/:id", async (req, res) => {
@@ -628,7 +668,6 @@ router.put("/updateFull/:id", async (req, res) => {
   }
 });
 
-
 // ---------------- VALIDATOR ----------------
 function isValidResult(resultArray) {
   const mainNumber = resultArray[0];
@@ -715,8 +754,11 @@ router.post("/addGame", async (req, res) => {
 // ---------------- DELETE GAME ----------------
 router.delete("/deleteGame/:name", async (req, res) => {
   try {
-    const gameName = req.params.name;
-    const deletedGame = await AllGames.findOneAndDelete({ name: gameName });
+    const gameName = decodeURIComponent(req.params.name).trim();
+
+    const deletedGame = await AllGames.findOneAndDelete({
+      name: { $regex: `^${gameName}\\s*$` },
+    });
 
     if (!deletedGame) {
       return res
@@ -774,7 +816,7 @@ router.put("/updateColor/:id", async (req, res) => {
 // router.put("/updateGame/:id", async (req, res) => {
 //   // console.log(req.body);
 //   console.log("called");
-  
+
 //   try {
 //     const { resultNo } = req.body;
 
@@ -880,7 +922,6 @@ router.put("/updateColor/:id", async (req, res) => {
 //       }
 //     });
 //     console.log(existingIndex);
-    
 
 //     if (existingIndex >= 0) {
 //       // override existing entry
@@ -924,7 +965,9 @@ router.put("/updateGame/:id", async (req, res) => {
 
     const game = await AllGames.findById(req.params.id);
     if (!game) {
-      return res.status(404).json({ success: false, message: "Game not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Game not found" });
     }
 
     let target = type === "Open" ? "openNo" : "closeNo";
@@ -956,8 +999,6 @@ router.put("/updateGame/:id", async (req, res) => {
     });
   }
 });
-
-
 
 router.put("/updateStatus/:id", async (req, res) => {
   try {
